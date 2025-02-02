@@ -17,77 +17,77 @@ struct ContentView: View {
     @State private var predictions: [Prediction] = []
     
     var body: some View {
-        GeometryReader { geometry in
-            VStack(spacing: 20) {
-                if let image = selectedImage {
-                    // Image Section with improved styling
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geometry.size.width - 32, height: (geometry.size.height)/2)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .padding(.horizontal)
-                    
-                    Text("I think it's \(predictions[0].gateName) gate")
-                        .bold()
-                    
-                    // Predictions List with better styling
-                    List(predictions) { prediction in
-                        HStack {
-                            Text(prediction.gateName)
-                                .font(.system(.body, design: .rounded))
-                            Spacer()
-                            Text(prediction.confidencePercentage)
-                                .font(.system(.body, design: .rounded))
-                                .foregroundColor(.blue)
-                        }
-                        .padding(.vertical, 8)
-                    }
-                    .scrollContentBackground(.hidden)
-                    .listStyle(.plain)
-                    
-                    // Reset Button with improved styling
-                    Button("Reset Picture") {
-                        isAlertPresent = true
-                    }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                    .padding(.bottom)
-                    .alert("Reset Action", isPresented: $isAlertPresent) {
-                        Button("Cancel", role: .cancel) { }
-                        Button("Reset", role: .destructive) {
-                            predictions = []
-                            selectedItem = nil
-                            selectedImage = nil
-                        }
-                    } message: {
-                        Text("This action will clear the picture and its prediction")
-                    }
-                } else {
-                    // Improved PhotosPicker styling
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        ContentUnavailableView("No Picture",
-                            systemImage: "photo.badge.plus",
-                            description: Text("Tap to select a picture from your Photo Library")
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .onChange(of: selectedItem) { _, newValue in
-                Task {
-                    if let data = try? await newValue?.loadTransferable(type: Data.self),
-                       let uiImage = UIImage(data: data) {
-                        selectedImage = uiImage
-                        predictions = [] // Clear previous predictions
-                        processImageClassification(uiImage)
+        VStack(spacing: 20) {
+            if let image = selectedImage {
+                // Image Section
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .cornerRadius(8)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 300)
+                    .padding(.horizontal)
+                
+                Text("I think it's \(predictions[0].gateName) gate")
+                    .bold()
+                
+                // Predictions List
+                List(predictions) { prediction in
+                    HStack {
+                        Text(prediction.gateName)
+                            .font(.system(.body, design: .rounded))
+                        Spacer()
+                        Text(prediction.confidencePercentage)
+                            .font(.system(.body, design: .rounded))
+                            .foregroundColor(.blue)
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .listStyle(.plain)
+                .padding()
+                
+                // Reset Button
+                Button("Reset Picture") {
+                    isAlertPresent = true
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .padding(.bottom)
+                .alert("Reset Action", isPresented: $isAlertPresent) {
+                    Button("Cancel", role: .cancel) { }
+                    Button("Reset", role: .destructive) {
+                        predictions = []
+                        selectedItem = nil
+                        selectedImage = nil
+                    }
+                } message: {
+                    Text("This action will clear the picture and its prediction")
+                }
+            } else {
+                // PhotosPicker
+                PhotosPicker(selection: $selectedItem, matching: .images) {
+                    ContentUnavailableView("No Picture",
+                                           systemImage: "photo.badge.plus",
+                                           description: Text("Tap to select a picture from your Photo Library")
+                    )
+                    .frame(height: 300)
+                }
+                .buttonStyle(.plain)
             }
-            .onAppear(perform: {
-                requestPhotoLibraryAccess()
-            })
         }
+        .onChange(of: selectedItem) { _, newValue in
+            Task {
+                if let data = try? await newValue?.loadTransferable(type: Data.self),
+                   let uiImage = UIImage(data: data) {
+                    selectedImage = uiImage
+                    predictions = [] // Clear previous predictions
+                    processImageClassification(uiImage)
+                }
+            }
+        }
+        .onAppear(perform: {
+            requestPhotoLibraryAccess()
+        })
     }
     
     private func requestPhotoLibraryAccess() {
@@ -123,7 +123,7 @@ struct ContentView: View {
         }
         
         let imageClassifierModel = imageClassifier.model
-
+        
         guard let model = try? VNCoreMLModel(for: imageClassifierModel) else {
             fatalError("App failed to create a `VNCoreMLModel` instance.")
         }
